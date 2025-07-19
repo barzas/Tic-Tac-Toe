@@ -1,13 +1,9 @@
 package com.example.tictactoe.tictactoe.controller;
 
-import com.example.tictactoe.tictactoe.dto.request.RegisterRequest;
-import com.example.tictactoe.tictactoe.dto.request.JoinByIdRequest;
+
 import com.example.tictactoe.tictactoe.dto.request.MoveRequest;
-import com.example.tictactoe.tictactoe.dto.response.GameResponse;
 import com.example.tictactoe.tictactoe.dto.response.MoveResponse;
-import com.example.tictactoe.tictactoe.dto.ErrorCode;
 import com.example.tictactoe.tictactoe.dto.ResultDTO;
-import com.example.tictactoe.tictactoe.model.GameState;
 import com.example.tictactoe.tictactoe.service.GameService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -33,4 +29,4 @@ public class GameController {
                 new MoveResponse(false, result.getErrorCode(), null));
         }
     }
-} 
+}
