@@ -1,43 +1,47 @@
 package com.example.tictactoe.tictactoe.service;
 
 import com.example.tictactoe.tictactoe.model.GameState;
+import com.example.tictactoe.tictactoe.dto.ErrorCode;
 
 public class GameValidation {
-    public static String validateJoin(GameState game, String playerId) {
+    public static ErrorCode validateJoin(GameState game, String playerId) {
         if (playerId == null || playerId.trim().isEmpty()) {
-            return "Invalid player ID";
+            return ErrorCode.INVALID_PLAYER_ID;
         }
         if (game == null) {
-            return "Game not found";
+            return ErrorCode.GAME_NOT_FOUND;
         }
         if (game.getPlayer1().equals(playerId)) {
-            return "You are already registered as player 1 in this game";
+            return ErrorCode.ALREADY_REGISTERED_P1;
         }
         if (game.getPlayer2() != null && game.getPlayer2().equals(playerId)) {
-            return "You are already registered as player 2 in this game";
+            return ErrorCode.ALREADY_REGISTERED_P2;
         }
-        return null;
+        return ErrorCode.NONE;
     }
 
-    public static String validateMove(GameState game, String playerId, int row, int col) {
-        if (game == null) {
-            return "Game not found";
+    public static ErrorCode validateMove(GameState game, String playerId, int row, int col) {
+        if (playerId == null || playerId.trim().isEmpty()) {
+            return ErrorCode.INVALID_PLAYER_ID;
         }
-        if (game.getStatus() != GameState.Status.IN_PROGRESS) {
-            return "Game is not in progress";
+        if (game == null) {
+            return ErrorCode.GAME_NOT_FOUND;
         }
         if (!playerId.equals(game.getPlayer1()) && !playerId.equals(game.getPlayer2())) {
-            return "You are not a player in this game";
+            return ErrorCode.NOT_A_PLAYER;
+        }
+        if (game.getStatus() != GameState.Status.IN_PROGRESS) {
+            return ErrorCode.GAME_NOT_IN_PROGRESS;
         }
         if (!playerId.equals(game.getCurrentTurn())) {
-            return "It's not your turn";
+            return ErrorCode.NOT_YOUR_TURN;
         }
         if (row < 0 || row > 2 || col < 0 || col > 2) {
-            return "Invalid move position";
+            return ErrorCode.INVALID_MOVE_POSITION;
         }
         if (game.getBoard()[row][col] != ' ') {
-            return "Cell already occupied";
+            return ErrorCode.CELL_OCCUPIED;
         }
-        return null;
+        return ErrorCode.NONE;
     }
 } 

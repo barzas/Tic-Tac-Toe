@@ -2,6 +2,7 @@ package com.example.tictactoe.tictactoe.service;
 
 import com.example.tictactoe.tictactoe.model.GameState;
 import com.example.tictactoe.tictactoe.dto.ResultDTO;
+import com.example.tictactoe.tictactoe.dto.ErrorCode;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -27,16 +28,16 @@ public class GameService {
     public ResultDTO.JoinGameResult joinAvailableGame(String playerId) {
         for (GameState game : games.values()) {
             if (game.getStatus() == GameState.Status.WAITING_FOR_PLAYER && game.getPlayer2() == null) {
-                String validationError = GameValidation.validateJoin(game, playerId);
-                if (validationError != null) {
-                    return new ResultDTO.JoinGameResult(null, validationError);
+                ErrorCode errorCode = GameValidation.validateJoin(game, playerId);
+                if (errorCode != ErrorCode.NONE) {
+                    return new ResultDTO.JoinGameResult(null, errorCode);
                 }
                 game.setPlayer2(playerId);
                 game.setStatus(GameState.Status.IN_PROGRESS);
-                return new ResultDTO.JoinGameResult(game, null);
+                return new ResultDTO.JoinGameResult(game, ErrorCode.NONE);
             }
         }
-        return new ResultDTO.JoinGameResult(null, "No available games to join");
+        return new ResultDTO.JoinGameResult(null, ErrorCode.NO_AVAILABLE_GAMES);
     }
 
     /**
@@ -47,16 +48,16 @@ public class GameService {
      */
     public ResultDTO.JoinGameResult joinGameById(String gameId, String playerId) {
         GameState game = games.get(gameId);
-        String validationError = GameValidation.validateJoin(game, playerId);
-        if (validationError != null) {
-            return new ResultDTO.JoinGameResult(null, validationError);
+        ErrorCode errorCode = GameValidation.validateJoin(game, playerId);
+        if (errorCode != ErrorCode.NONE) {
+            return new ResultDTO.JoinGameResult(null, errorCode);
         }
         if (game.getStatus() != GameState.Status.WAITING_FOR_PLAYER || game.getPlayer2() != null) {
-            return new ResultDTO.JoinGameResult(null, "Game is already full or in progress");
+            return new ResultDTO.JoinGameResult(null, ErrorCode.GAME_FULL);
         }
         game.setPlayer2(playerId);
         game.setStatus(GameState.Status.IN_PROGRESS);
-        return new ResultDTO.JoinGameResult(game, null);
+        return new ResultDTO.JoinGameResult(game, ErrorCode.NONE);
     }
 
     // Get a game by ID
@@ -74,9 +75,9 @@ public class GameService {
      */
     public ResultDTO.MoveResult makeMove(String gameId, String playerId, int row, int col) {
         GameState game = games.get(gameId);
-        String validationError = GameValidation.validateMove(game, playerId, row, col);
-        if (validationError != null) {
-            return new ResultDTO.MoveResult(null, validationError);
+        ErrorCode errorCode = GameValidation.validateMove(game, playerId, row, col);
+        if (errorCode != ErrorCode.NONE) {
+            return new ResultDTO.MoveResult(null, errorCode);
         }
         char mark = playerId.equals(game.getPlayer1()) ? 'X' : 'O';
         game.getBoard()[row][col] = mark;
@@ -85,14 +86,14 @@ public class GameService {
             game.setStatus(GameState.Status.FINISHED);
             game.setWinner(playerId);
             System.out.println("Game over! Winner: " + playerId + " (Game ID: " + gameId + ")");
-            return new ResultDTO.MoveResult(game, null);
+            return new ResultDTO.MoveResult(game, ErrorCode.NONE);
         }
         // Check for draw
         if (isDraw(game.getBoard())) {
             game.setStatus(GameState.Status.FINISHED);
             game.setWinner(null);
             System.out.println("Game over! Draw (Game ID: " + gameId + ")");
-            return new ResultDTO.MoveResult(game, null);
+            return new ResultDTO.MoveResult(game, ErrorCode.NONE);
         }
         // Switch turn
         if (game.getCurrentTurn().equals(game.getPlayer1())) {
@@ -100,7 +101,7 @@ public class GameService {
         } else {
             game.setCurrentTurn(game.getPlayer1());
         }
-        return new ResultDTO.MoveResult(game, null);
+        return new ResultDTO.MoveResult(game, ErrorCode.NONE);
     }
 
     private boolean checkWin(char[][] board, char mark) {

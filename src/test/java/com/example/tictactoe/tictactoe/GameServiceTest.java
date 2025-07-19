@@ -196,7 +196,7 @@ public class GameServiceTest {
         gameService.joinGameById(game.getGameId(), "p2");
         ResultDTO.MoveResult result = gameService.makeMove(game.getGameId(), "", 0, 0);
         assertNull(result.getGame());
-        assertEquals("You are not a player in this game", result.getError());
+        assertEquals("Invalid player ID", result.getError());
     }
 
     @Test

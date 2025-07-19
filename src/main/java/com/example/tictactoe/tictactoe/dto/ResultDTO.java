@@ -5,23 +5,25 @@ import com.example.tictactoe.tictactoe.model.GameState;
 public class ResultDTO {
     public static class JoinGameResult {
         private final GameState game;
-        private final String error;
-        public JoinGameResult(GameState game, String error) {
+        private final ErrorCode errorCode;
+        public JoinGameResult(GameState game, ErrorCode errorCode) {
             this.game = game;
-            this.error = error;
+            this.errorCode = errorCode;
         }
         public GameState getGame() { return game; }
-        public String getError() { return error; }
+        public ErrorCode getErrorCode() { return errorCode; }
+        public String getError() { return errorCode != null ? errorCode.getMessage() : null; }
     }
 
     public static class MoveResult {
         private final GameState game;
-        private final String error;
-        public MoveResult(GameState game, String error) {
+        private final ErrorCode errorCode;
+        public MoveResult(GameState game, ErrorCode errorCode) {
             this.game = game;
-            this.error = error;
+            this.errorCode = errorCode;
         }
         public GameState getGame() { return game; }
-        public String getError() { return error; }
+        public ErrorCode getErrorCode() { return errorCode; }
+        public String getError() { return errorCode != null ? errorCode.getMessage() : null; }
     }
 } 
