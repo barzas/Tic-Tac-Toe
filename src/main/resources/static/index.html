@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tic-Tac-Toe WebSocket Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2em; }
+        #board { display: grid; grid-template-columns: repeat(3, 40px); grid-gap: 5px; margin: 1em 0; }
+        .cell { width: 40px; height: 40px; font-size: 1.5em; text-align: center; cursor: pointer; border: 1px solid #888; background: #f9f9f9; }
+        #log { height: 120px; overflow-y: auto; border: 1px solid #ccc; padding: 0.5em; margin-bottom: 1em; }
+    </style>
+</head>
+<body>
+<h2>Tic-Tac-Toe WebSocket Demo</h2>
+<div>
+    <label>Player ID: <input id="playerId" value="player1"></label>
+    <button onclick="connect()">Connect</button>
+    <span id="status"></span>
+</div>
+<div style="margin-top:1em;">
+    <button onclick="createGame()">Create Game</button>
+    <button onclick="joinAnyGame()">Join Any Game</button>
+    <input id="gameIdInput" placeholder="Game ID" style="width:120px;">
+    <button onclick="joinByGameId()">Join by Game ID</button>
+</div>
+<div id="log"></div>
+<div id="gameArea" style="display:none;">
+    <div>Game ID: <span id="gameId"></span></div>
+    <div>Current Turn: <span id="currentTurn"></span></div>
+    <div>Winner: <span id="winner"></span></div>
+    <div id="gameOverMsg" style="color:green;font-weight:bold;"></div>
+    <div id="board"></div>
+</div>
+<script>
+let stompClient = null;
+let currentGameId = null;
+let playerId = null;
+let gameSubscription = null;
+
+function log(msg) {
+    const logDiv = document.getElementById('log');
+    logDiv.innerHTML += msg + '<br>';
+    logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+function connect() {
+    playerId = document.getElementById('playerId').value;
+    const socket = new SockJS('/ws');
+    stompClient = Stomp.over(socket);
+    stompClient.connect({}, function () {
+        document.getElementById('status').textContent = 'Connected';
+        log('Connected as ' + playerId);
+        // Only subscribe to /topic/game after join/create
+    });
+}
+
+function subscribeToGame(gameId) {
+    if (gameSubscription) {
+        gameSubscription.unsubscribe();
+    }
+    gameSubscription = stompClient.subscribe('/topic/game/' + gameId, function (message) {
+        const resp = JSON.parse(message.body);
+        handleGameUpdate(resp);
+    });
+}
+
+function createGame() {
+    fetch('/api/game', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId })
+    })
+    .then(res => res.json())
+    .then(resp => {
+        if (resp.error) {
+            log('<span style="color:red">Error: ' + resp.error + '</span>');
+            return;
+        }
+        if (resp.game && resp.game.gameId) {
+            currentGameId = resp.game.gameId;
+            subscribeToGame(currentGameId);
+            handleGameUpdate(resp);
+        }
+    });
+}
+
+function joinByGameId() {
+    const gameId = document.getElementById('gameIdInput').value;
+    fetch('/api/game/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId, gameId })
+    })
+    .then(res => res.json())
+    .then(resp => {
+        if (resp.error) {
+            log('<span style="color:red">Error: ' + resp.error + '</span>');
+            return;
+        }
+        if (resp.game && resp.game.gameId) {
+            currentGameId = resp.game.gameId;
+            subscribeToGame(currentGameId);
+            handleGameUpdate(resp);
+        }
+    });
+}
+
+function joinAnyGame() {
+    fetch('/api/game/join-any', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId })
+    })
+    .then(res => res.json())
+    .then(resp => {
+        if (resp.error) {
+            log('<span style="color:red">Error: ' + resp.error + '</span>');
+            return;
+        }
+        if (resp.game && resp.game.gameId) {
+            currentGameId = resp.game.gameId;
+            subscribeToGame(currentGameId);
+            handleGameUpdate(resp);
+        }
+    });
+}
+
+function handleGameUpdate(resp) {
+    if (resp.error) {
+        log('<span style="color:red">Error: ' + resp.error + '</span>');
+        return;
+    }
+    if (resp.game) {
+        currentGameId = resp.game.gameId;
+        document.getElementById('gameArea').style.display = '';
+        document.getElementById('gameId').textContent = resp.game.gameId;
+        document.getElementById('currentTurn').textContent = resp.game.currentTurn;
+        document.getElementById('winner').textContent = resp.game.winner || '';
+        // Game over event
+        let overMsg = '';
+        if (resp.game.status === 'FINISHED') {
+            if (resp.game.winner) {
+                overMsg = (resp.game.winner === playerId ? 'You win!' : (resp.game.winner === null ? '' : resp.game.winner + ' wins!'));
+            } else {
+                overMsg = 'Game Over!';
+            }
+        }
+        document.getElementById('gameOverMsg').textContent = overMsg;
+        renderBoard(resp.game.board, resp.game.status === 'IN_PROGRESS' && resp.game.currentTurn === playerId);
+    }
+}
+
+function renderBoard(board, canMove) {
+    const boardDiv = document.getElementById('board');
+    boardDiv.innerHTML = '';
+    for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.textContent = board[i][j] === ' ' ? '' : board[i][j];
+            if (canMove && board[i][j] === ' ') {
+                cell.onclick = () => makeMove(i, j);
+            }
+            boardDiv.appendChild(cell);
+        }
+    }
+}
+
+function makeMove(row, col) {
+    if (!currentGameId) return;
+    console.log('Sending move:', { gameId: currentGameId, playerId, row, col });
+    stompClient.send('/app/move', {}, JSON.stringify({ gameId: currentGameId, playerId, row, col }));
+}
+</script>
+</body>
+</html> 
