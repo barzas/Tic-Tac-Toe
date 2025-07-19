@@ -89,3 +89,18 @@ All responses include `success`, `error` (if any), and the current `game` state.
 - Store game history in a database
 - Add support for spectators or chat
 
+## Simple Web UI
+A minimal web interface is included for quick testing and demo:
+- **Location:** `src/main/resources/static/index.html`
+- **How to use:**
+  1. Start the Spring Boot server.
+  2. Open [http://localhost:8080/](http://localhost:8080/) in your browser.
+  3. Enter a player ID, connect, and use the buttons to create/join games and play.
+  4. Open in two tabs/windows for two players.
+- **Features:**
+  - Connect as any player ID
+  - Create/join games (by any or by ID)
+  - See game state, board, turn, and winner
+  - Click to make moves when it's your turn
+  - Log of server messages and errors
+

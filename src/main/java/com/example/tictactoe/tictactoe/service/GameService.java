@@ -84,12 +84,14 @@ public class GameService {
         if (checkWin(game.getBoard(), mark)) {
             game.setStatus(GameState.Status.FINISHED);
             game.setWinner(playerId);
+            System.out.println("Game over! Winner: " + playerId + " (Game ID: " + gameId + ")");
             return new ResultDTO.MoveResult(game, null);
         }
         // Check for draw
         if (isDraw(game.getBoard())) {
             game.setStatus(GameState.Status.FINISHED);
             game.setWinner(null);
+            System.out.println("Game over! Draw (Game ID: " + gameId + ")");
             return new ResultDTO.MoveResult(game, null);
         }
         // Switch turn
