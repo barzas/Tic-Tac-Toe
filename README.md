@@ -47,35 +47,45 @@ src/main/java/com/example/tictactoe/tictactoe/
    ```
    The server will start on `http://localhost:8080` by default.
 
+## Architecture
+- **Game creation and joining:** via REST API
+- **Gameplay (moves, updates):** via WebSocket (STOMP)
+
+## REST API
+| Method | Endpoint           | Body Example                                 | Description                |
+|--------|--------------------|----------------------------------------------|----------------------------|
+| POST   | /api/game          | { "playerId": "player1" }                  | Create a new game          |
+| POST   | /api/game/join     | { "playerId": "player2", "gameId": "..." } | Join a specific game       |
+| POST   | /api/game/join-any | { "playerId": "player2" }                  | Join any available game    |
+
 ## WebSocket API
 - **Endpoint:** `/ws` (SockJS/STOMP)
-- **Broker:** `/topic/game` (broadcasts)
+- **Per-game topic:** `/topic/game/{gameId}` (subscribe after REST join/create)
 - **App Prefix:** `/app`
+- **Moves:** Send to `/app/move` with `{ gameId, playerId, row, col }`
 
-### Message Mappings
-| Action         | Mapping             | Request DTO                | Description                       |
-| --------------|---------------------|----------------------------|-----------------------------------|
-| Create Game   | `/app/create`       | `RegisterRequest`          | Register and create a new game    |
-| Join Any Game | `/app/joinAnyGame`  | `RegisterRequest`          | Join any available game           |
-| Join by ID    | `/app/joinByGameId` | `JoinByIdRequest`          | Join a specific game by ID        |
-| Make Move     | `/app/move`         | `MoveRequest`              | Make a move in a game             |
+## Client Flow
+1. **Connect** (WebSocket): Establish a connection, but do not subscribe yet.
+2. **Create or Join Game** (REST):
+    - Call `POST /api/game` to create, or `POST /api/game/join`/`join-any` to join.
+    - On success, get `gameId` and subscribe to `/topic/game/{gameId}`.
+3. **Play**: Send moves via WebSocket, receive real-time updates on the per-game topic.
 
-### DTO Examples
-- **RegisterRequest**
-  ```json
-  { "playerId": "player1" }
-  ```
-- **JoinByIdRequest**
-  ```json
-  { "playerId": "player2", "gameId": "<game-id>" }
-  ```
-- **MoveRequest**
-  ```json
-  { "gameId": "<game-id>", "playerId": "player1", "row": 0, "col": 2 }
-  ```
+## Example REST Usage
+```sh
+# Create a game
+curl -X POST http://localhost:8080/api/game -H 'Content-Type: application/json' -d '{"playerId":"player1"}'
 
-### Response DTOs
-All responses include `success`, `error` (if any), and the current `game` state.
+# Join a game
+curl -X POST http://localhost:8080/api/game/join -H 'Content-Type: application/json' -d '{"playerId":"player2", "gameId":"..."}'
+
+# Join any available game
+curl -X POST http://localhost:8080/api/game/join-any -H 'Content-Type: application/json' -d '{"playerId":"player2"}'
+```
+
+## Example WebSocket Usage
+- Subscribe to `/topic/game/{gameId}` after REST join/create.
+- Send moves to `/app/move` as before.
 
 ## How to Play (Client Example)
 1. Connect to `/ws` using a STOMP WebSocket client.
@@ -83,11 +93,6 @@ All responses include `success`, `error` (if any), and the current `game` state.
 3. Send a message to `/app/create` or `/app/joinAnyGame` or `/app/joinByGameId` to join a game.
 4. Use `/app/move` to make moves.
 
-## Extending the Project
-- Add a frontend (React, Vue, Angular, etc.) for a complete user experience
-- Add authentication and persistent user management
-- Store game history in a database
-- Add support for spectators or chat
 
 ## Simple Web UI
 A minimal web interface is included for quick testing and demo:

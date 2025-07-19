@@ -37,6 +37,7 @@
 let stompClient = null;
 let currentGameId = null;
 let playerId = null;
+let gameSubscription = null;
 
 function log(msg) {
     const logDiv = document.getElementById('log');
@@ -51,24 +52,79 @@ function connect() {
     stompClient.connect({}, function () {
         document.getElementById('status').textContent = 'Connected';
         log('Connected as ' + playerId);
-        stompClient.subscribe('/topic/game', function (message) {
-            const resp = JSON.parse(message.body);
-            handleGameUpdate(resp);
-        });
+        // Only subscribe to /topic/game after join/create
+    });
+}
+
+function subscribeToGame(gameId) {
+    if (gameSubscription) {
+        gameSubscription.unsubscribe();
+    }
+    gameSubscription = stompClient.subscribe('/topic/game/' + gameId, function (message) {
+        const resp = JSON.parse(message.body);
+        handleGameUpdate(resp);
     });
 }
 
 function createGame() {
-    stompClient.send('/app/create', {}, JSON.stringify({ playerId }));
-}
-
-function joinAnyGame() {
-    stompClient.send('/app/joinAnyGame', {}, JSON.stringify({ playerId }));
+    fetch('/api/game', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId })
+    })
+    .then(res => res.json())
+    .then(resp => {
+        if (resp.error) {
+            log('<span style="color:red">Error: ' + resp.error + '</span>');
+            return;
+        }
+        if (resp.game && resp.game.gameId) {
+            currentGameId = resp.game.gameId;
+            subscribeToGame(currentGameId);
+            handleGameUpdate(resp);
+        }
+    });
 }
 
 function joinByGameId() {
     const gameId = document.getElementById('gameIdInput').value;
-    stompClient.send('/app/joinByGameId', {}, JSON.stringify({ playerId, gameId }));
+    fetch('/api/game/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId, gameId })
+    })
+    .then(res => res.json())
+    .then(resp => {
+        if (resp.error) {
+            log('<span style="color:red">Error: ' + resp.error + '</span>');
+            return;
+        }
+        if (resp.game && resp.game.gameId) {
+            currentGameId = resp.game.gameId;
+            subscribeToGame(currentGameId);
+            handleGameUpdate(resp);
+        }
+    });
+}
+
+function joinAnyGame() {
+    fetch('/api/game/join-any', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId })
+    })
+    .then(res => res.json())
+    .then(resp => {
+        if (resp.error) {
+            log('<span style="color:red">Error: ' + resp.error + '</span>');
+            return;
+        }
+        if (resp.game && resp.game.gameId) {
+            currentGameId = resp.game.gameId;
+            subscribeToGame(currentGameId);
+            handleGameUpdate(resp);
+        }
+    });
 }
 
 function handleGameUpdate(resp) {
@@ -114,6 +170,7 @@ function renderBoard(board, canMove) {
 
 function makeMove(row, col) {
     if (!currentGameId) return;
+    console.log('Sending move:', { gameId: currentGameId, playerId, row, col });
     stompClient.send('/app/move', {}, JSON.stringify({ gameId: currentGameId, playerId, row, col }));
 }
 </script>
